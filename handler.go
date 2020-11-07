@@ -16,13 +16,15 @@ import (
 type Type string
 
 const (
-	Driving Type = "Driving"
+	driving Type = "driving"
 )
 
 // sendRequest holds the request structure for SendHandler
 type sendRequest struct {
-	Type    Type   `json:"type"`
-	Message string `json:"message"`
+	Type     Type        `json:"type"`
+	To       string      `json:"to"`
+	Message  string      `json:"message"`
+	Metadata interface{} `json:"metadata"`
 }
 
 type sendResponse struct {
@@ -48,9 +50,10 @@ func SendHandler(c *Client) func(http.ResponseWriter, *http.Request) {
 		}
 
 		switch req.Type {
-		case Driving:
+		case driving:
 			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 			w.WriteHeader(http.StatusNoContent)
+			c.Send(req.To, "Driving lessons are available!", req.Message)
 			break
 		default:
 			http.Error(w, errors.New("unrecognized email request type").Error(), http.StatusBadRequest)
@@ -66,6 +69,14 @@ func decodeRequestBody(b []byte) (*sendRequest, error) {
 	if err != nil {
 		log.Printf("parsing of request body failed: %v", err)
 		return nil, errors.New("failed to parse request body")
+	}
+
+	if len(req.To) == 0 {
+		return &req, errors.New("'to' is required")
+	}
+
+	if len(req.Type) == 0 {
+		return &req, errors.New("'type' is required")
 	}
 
 	return &req, nil

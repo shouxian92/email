@@ -1,70 +1,34 @@
 package main
 
 import (
-	"encoding/base64"
-	"io/ioutil"
 	"log"
+	"os"
 
-	"golang.org/x/net/context"
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
-	"google.golang.org/api/gmail/v1"
-	"google.golang.org/api/googleapi"
-	"google.golang.org/api/option"
+	"github.com/sendgrid/sendgrid-go"
+	"github.com/sendgrid/sendgrid-go/helpers/mail"
 )
 
 // Client is an implementation of an email provider (Gmail)
 type Client struct {
-	service *gmail.Service
+	service *sendgrid.Client
 }
 
 // Send sends an email to the intended recipient and subject with the given message
 func (c *Client) Send(r string, s string, m string) (bool, error) {
-	var message gmail.Message
-	emailTo := "To: " + r + "\r\n"
-	subject := "Subject: " + m + "\r\n"
-	msg := []byte(emailTo + subject + m)
-	message.Raw = base64.URLEncoding.EncodeToString(msg)
-	_, err := c.service.Users.Messages.Send(emailToImpersonate, &message).Do()
+	fromUser := mail.NewEmail(senderName, senderEmail)
+	to := mail.NewEmail("", r)
+	message := mail.NewSingleEmail(fromUser, s, to, "", m)
+	_, err := c.service.Send(message)
 
 	if err != nil {
-		log.Fatalf("unable to send email: %v", err.(*googleapi.Error))
+		log.Printf("failed to send email: %v", err)
 		return false, err
 	}
 
 	return true, nil
 }
 
-func readCredentials(ctx context.Context) (oauth2.TokenSource, error) {
-	b, err := ioutil.ReadFile("credentials.json")
-	if err != nil {
-		log.Fatalf("error reading credentials json: %v", err)
-		return nil, err
-	}
-
-	config, err := google.JWTConfigFromJSON(b, gmail.GmailSendScope)
-
-	if err != nil {
-		log.Fatalf("error parsing configuration: %v", err)
-		return nil, err
-	}
-	config.Subject = emailToImpersonate
-	return config.TokenSource(ctx), nil
-}
-
-// NewInstance returns a new instance of the GmailClient
+// NewInstance returns a new instance of the email client
 func NewInstance() (*Client, error) {
-	ctx := context.Background()
-	ts, err := readCredentials(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	srv, err := gmail.NewService(ctx, option.WithTokenSource(ts))
-	if err != nil {
-		log.Fatalf("unable to retrieve Gmail client: %v", err)
-		return nil, err
-	}
-
-	return &Client{service: srv}, nil
+	return &Client{service: sendgrid.NewSendClient(os.Getenv("SENDGRID_API_KEY"))}, nil
 }

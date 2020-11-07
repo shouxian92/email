@@ -1,5 +1,6 @@
 package main
 
 const (
-	emailToImpersonate = "no.reply@shouxian.sg"
+	senderEmail = "no.reply@shouxian.sg"
+	senderName  = "Do Not Reply"
 )
