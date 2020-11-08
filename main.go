@@ -24,5 +24,5 @@ func main() {
 	r.HandleFunc("/send", SendHandler(m)).Methods(http.MethodPost)
 	http.Handle("/", r)
 
-	log.Fatal(http.ListenAndServe(":8080", r))
+	log.Fatal(http.ListenAndServe(":80", r))
 }
