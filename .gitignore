@@ -1,2 +1,3 @@
 *.exe
 credentials.json
+.vscode
