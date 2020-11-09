@@ -10,9 +10,6 @@ import (
 	"github.com/shouxian92/email/service"
 )
 
-// Type represents the kind of email template that will be used for sending
-type Type string
-
 type sendResponse struct {
 	Error string `json:"error,omitempty"`
 }
@@ -28,18 +25,15 @@ func SendHandler(m map[string]service.Client) func(http.ResponseWriter, *http.Re
 		req, err := decodeRequestBody(b)
 
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-			w.WriteHeader(http.StatusBadRequest)
-			res := &sendResponse{err.Error()}
-			json.NewEncoder(w).Encode(res)
+			res := sendResponse{err.Error()}
+			encodeResponse(w, res, http.StatusBadRequest)
 			return
 		}
 
 		c, ok := m[req.Type]
 		if !ok {
-			res := &sendResponse{"unrecognized email request type"}
-			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(res)
+			res := sendResponse{"unrecognized email request type"}
+			encodeResponse(w, res, http.StatusBadRequest)
 			return
 		}
 
@@ -51,10 +45,8 @@ func SendHandler(m map[string]service.Client) func(http.ResponseWriter, *http.Re
 			switch err.Error() {
 			case "too many requests":
 				w.WriteHeader(http.StatusTooManyRequests)
-				break
 			default:
 				http.Error(w, err.Error(), http.StatusInternalServerError)
-				break
 			}
 			return
 		}
@@ -81,4 +73,15 @@ func decodeRequestBody(b []byte) (*service.RequestContext, error) {
 	}
 
 	return &req, nil
+}
+
+func encodeResponse(w http.ResponseWriter, r sendResponse, s int) {
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.WriteHeader(s)
+
+	err := json.NewEncoder(w).Encode(r)
+
+	if err != nil {
+		log.Fatalf("failed to decode response body")
+	}
 }
